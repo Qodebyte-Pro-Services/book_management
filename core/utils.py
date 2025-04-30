@@ -6,7 +6,6 @@ from django.conf import settings
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 
-
 def generate_otp(length=6):
     """Generate a random OTP of specified length."""
     return ''.join(random.choices(string.digits, k=length))
@@ -45,230 +44,211 @@ def send_email_with_brevo(to_email, subject, html_content, text_content=None):
         raise e
 
 def send_verification_email(email, otp):
-    """Send verification email with OTP using Django's email backend."""
-    from django.core.mail import send_mail
-    from django.conf import settings
-    
-    subject = 'Email Verification for School Management System'
+    """Send verification email with OTP using Brevo."""
+    subject = 'Verify Your Email - School Management System'
+
     html_content = f"""
     <html>
-        <body>
-            <h1>Email Verification</h1>
-            <p>Thank you for registering with the School Management System.</p>
-            <p>Your verification code is: <strong>{otp}</strong></p>
-            <p>This code will expire in 1 hour.</p>
-            <p>If you did not request this verification, please ignore this email.</p>
+        <body style="font-family: Arial, sans-serif; color: #333;">
+            <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #2c3e50;">Email Verification</h2>
+                <p>Dear User,</p>
+                <p>Thank you for registering with the <strong>School Management System</strong>.</p>
+                <p>Please use the verification code below to complete your registration:</p>
+                <p style="font-size: 20px; font-weight: bold; background-color: #f4f4f4; padding: 10px; display: inline-block; border-radius: 4px;">
+                    {otp}
+                </p>
+                <p>This code will expire in <strong>1 hour</strong>.</p>
+                <p>If you did not request this email, you can safely ignore it.</p>
+                <p>Best regards,<br>School Management,<br>Qodebyte Team</p>
+            </div>
         </body>
     </html>
     """
-    text_content = f"Your verification code is: {otp}. This code will expire in 1 hour."
-    
+
+    text_content = f"""\
+    Dear User,
+
+    Thank you for registering with the School Management System.
+
+    Your verification code is: {otp}
+
+    This code will expire in 1 hour.
+
+    If you did not request this verification, please ignore this email.
+
+    Best regards,
+    School Management
+    Qodebyte Team
+    """
+
     try:
-        print(f"Sending verification email to {email}...")
-        result = send_mail(
-            subject=subject,
-            message=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            html_message=html_content,
-            fail_silently=False,
-        )
-        print(f"Email sent successfully! Result: {result}")
-        return True
+        return send_email_with_brevo(email, subject, html_content, text_content)
     except Exception as e:
-        print(f"Failed to send email: {str(e)}")
-        
-        # For development, print the OTP to console
-        if settings.DEBUG:
-            print("\n==== DEVELOPMENT MODE: EMAIL WOULD BE SENT ====")
-            print(f"To: {email}")
-            print(f"Subject: {subject}")
-            print(f"OTP: {otp}")
-            print("==============================================\n")
-            return True  # Return True in development so registration can continue
-        
-        # In production, re-raise the exception
+        print(f"Failed to send verification email: {str(e)}")
         raise e
 
 def send_password_reset_email(email, otp):
-    """Send password reset email with token using Django's email backend."""
-    from django.core.mail import send_mail
-    from django.conf import settings
-    
-    subject = 'Password Reset for School Management System'
+    """Send password reset email with token using Brevo."""
+    subject = 'Password Reset Request - School Management System'
+
     html_content = f"""
-    <html>
-        <body>
-            <h1>Password Reset</h1>
-            <p>You have requested to reset your password for the School Management System.</p>
-            <p>Your password reset token is: <strong>{otp}</strong></p>
-            <p>This token will expire in 1 hour.</p>
-            <p>If you did not request this password reset, please ignore this email.</p>
-        </body>
-    </html>
-    """
-    text_content = f"Your password reset token is: {otp}. This token will expire in 1 hour."
-    
+        <html>
+            <body style="font-family: Arial, sans-serif; color: #333;">
+                <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                    <h2 style="color: #2c3e50;">Password Reset Request</h2>
+                    <p>Dear User,</p>
+                    <p>We received a request to reset your password for your <strong>School Management System</strong> account.</p>
+                    <p>Please use the following token to reset your password:</p>
+                    <p style="font-size: 20px; font-weight: bold; background-color: #f4f4f4; padding: 10px; display: inline-block; border-radius: 4px;">
+                        {otp}
+                    </p>
+                    <p>This token is valid for <strong>1 hour</strong>.</p>
+                    <p>If you did not request this password reset, please ignore this email or contact support.</p>
+                    <p>Best regards,<br>School Management,<br>Qodebyte Team</p>
+                </div>
+            </body>
+        </html>
+        """
+
+    text_content = f"""\
+        Dear User,
+
+        We received a request to reset your password for your School Management System account.
+
+        Your password reset token is: {otp}
+
+        This token will expire in 1 hour.
+
+        If you did not request this, please ignore this message or contact support.
+
+       Best regards,
+       School Management
+       Qodebyte Team
+        """
+
     try:
-        print(f"Sending password reset email to {email}...")
-        result = send_mail(
-            subject=subject,
-            message=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            html_message=html_content,
-            fail_silently=False,
-        )
-        print(f"Email sent successfully! Result: {result}")
-        return True
+        return send_email_with_brevo(email, subject, html_content, text_content)
     except Exception as e:
-        print(f"Failed to send email: {str(e)}")
-        
-        # For development, print the token to console
-        if settings.DEBUG:
-            print("\n==== DEVELOPMENT MODE: EMAIL WOULD BE SENT ====")
-            print(f"To: {email}")
-            print(f"Subject: {subject}")
-            print(f"Token: {otp}")
-            print("==============================================\n")
-            return True  # Return True in development so password reset can continue
-        
-        # In production, re-raise the exception
+        print(f"Failed to send password reset email: {str(e)}")
         raise e
 
 def send_school_creation_email(email, school_name, school_type, full_name):
-    """Send email notification when a school is created using Django's email backend."""
-    from django.core.mail import send_mail
-    from django.conf import settings
-    
-    subject = 'School Registration Confirmation'
+    """Send email notification when a school is created using Brevo."""
+    subject = 'School Registration Confirmation - School Management System'
+
+    login_url = "https://your-domain.com/login"  # Replace with your actual login URL
+
     html_content = f"""
-    <html>
-        <body>
-            <h1>School Registration Confirmation</h1>
-            <p>Dear {full_name},</p>
-            <p>Congratulations! Your school has been successfully registered with the School Management System.</p>
-            <p><strong>School Details:</strong></p>
-            <ul>
-                <li><strong>School Name:</strong> {school_name}</li>
-                <li><strong>School Type:</strong> {school_type.title()}</li>
-            </ul>
-            <p>You can now log in to the School Management System to manage your school.</p>
-            <p>Thank you for choosing our platform!</p>
-        </body>
-    </html>
-    """
-    text_content = f"""
-    School Registration Confirmation
-    
-    Dear {full_name},
-    
-    Congratulations! Your school has been successfully registered with the School Management System.
-    
-    School Details:
-    - School Name: {school_name}
-    - School Type: {school_type.title()}
-    
-    You can now log in to the School Management System to manage your school.
-    
-    Thank you for choosing our platform!
-    """
-    
+        <html>
+            <body style="font-family: Arial, sans-serif; color: #333;">
+                <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                    <h2 style="color: #2c3e50;">School Registration Confirmation</h2>
+                    <p>Dear {full_name},</p>
+                    <p>Congratulations! Your school has been successfully registered with the <strong>School Management System</strong>.</p>
+                    <p><strong>School Details:</strong></p>
+                    <ul style="list-style-type: none; padding-left: 0;">
+                        <li><strong>School Name:</strong> {school_name}</li>
+                        <li><strong>School Type:</strong> {school_type.title()}</li>
+                    </ul>
+                    <p>You can now log in to your account and start managing your school’s operations efficiently.</p>
+                    <p>
+                        <a href="{login_url}" style="display: inline-block; padding: 10px 20px; background-color: #2c3e50; color: #fff; text-decoration: none; border-radius: 4px;">
+                            Log In Now
+                        </a>
+                    </p>
+                    <p>If the button above doesn't work, copy and paste this URL into your browser: <br>
+                        <a href="{login_url}">{login_url}</a>
+                    </p>
+                    <p>We’re excited to have you on board!</p>
+                    <p>Best regards,<br>School Management,<br>Qodebyte Team</p>
+                </div>
+            </body>
+        </html>
+        """
+
+    text_content = f"""\
+        School Registration Confirmation
+
+        Dear {full_name},
+
+        Congratulations! Your school has been successfully registered with the School Management System.
+
+        School Details:
+        - School Name: {school_name}
+        - School Type: {school_type.title()}
+
+        You can now log in and start managing your school.
+
+        Login here: {login_url}
+
+        Best regards,
+        School Management
+        Qodebyte Team
+        """
     try:
-        print(f"Sending school creation email to {email}...")
-        result = send_mail(
-            subject=subject,
-            message=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            html_message=html_content,
-            fail_silently=False,
-        )
-        print(f"Email sent successfully! Result: {result}")
-        return True
+        return send_email_with_brevo(email, subject, html_content, text_content)
     except Exception as e:
-        print(f"Failed to send email: {str(e)}")
-        
-        # For development, print the school details to console
-        if settings.DEBUG:
-            print("\n==== DEVELOPMENT MODE: EMAIL WOULD BE SENT ====")
-            print(f"To: {email}")
-            print(f"Subject: {subject}")
-            print(f"School Details:")
-            print(f"  Name: {school_name}")
-            print(f"  Type: {school_type.title()}")
-            print("==============================================\n")
-            return True  # Return True in development so school creation can continue
-        
-        # In production, re-raise the exception
+        print(f"Failed to send school creation email: {str(e)}")
         raise e
 
 def send_teacher_credentials_email(email, password, full_name, school_name):
-    """Send login credentials to a newly created teacher using Django's email backend."""
-    from django.core.mail import send_mail
-    from django.conf import settings
-    
-    subject = 'Your Teacher Account Credentials'
+    """Send login credentials to a newly created teacher using Brevo."""
+    subject = 'Your Teacher Account Credentials - School Management System'
+
+    login_url = "https://your-domain.com/login"  # Replace with your actual login URL
+
     html_content = f"""
     <html>
-        <body>
-            <h1>Welcome to the School Management System</h1>
-            <p>Dear {full_name},</p>
-            <p>Your teacher account has been created for <strong>{school_name}</strong>.</p>
-            <p><strong>Your login credentials:</strong></p>
-            <ul>
-                <li><strong>Email:</strong> {email}</li>
-                <li><strong>Password:</strong> {password}</li>
-            </ul>
-            <p>Please log in to the School Management System using these credentials. For security reasons, we recommend changing your password after your first login.</p>
-            <p>If you have any questions, please contact your school administrator.</p>
-            <p>Thank you for joining our platform!</p>
+        <body style="font-family: Arial, sans-serif; color: #333;">
+            <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #2c3e50;">Welcome to the School Management System</h2>
+                <p>Dear {full_name},</p>
+                <p>Your teacher account has been successfully created for <strong>{school_name}</strong>.</p>
+                <p><strong>Your login credentials:</strong></p>
+                <ul style="list-style-type: none; padding-left: 0;">
+                    <li><strong>Email:</strong> {email}</li>
+                    <li><strong>Password:</strong> {password}</li>
+                </ul>
+                <p>To access your account, please click the button below:</p>
+                <p>
+                    <a href="{login_url}" style="display: inline-block; padding: 10px 20px; background-color: #2c3e50; color: #fff; text-decoration: none; border-radius: 4px;">
+                        Log In to Your Account
+                    </a>
+                </p>
+                <p>If the button above doesn’t work, copy and paste this URL into your browser:<br>
+                    <a href="{login_url}">{login_url}</a>
+                </p>
+                <p>We recommend changing your password after your first login.</p>
+                <p>Best regards,<br>School Management,<br>Qodebyte Team</p>
+            </div>
         </body>
     </html>
     """
-    text_content = f"""
+
+    text_content = f"""\
     Welcome to the School Management System
-    
+
     Dear {full_name},
-    
+
     Your teacher account has been created for {school_name}.
-    
-    Your login credentials:
+
+    Login Credentials:
     - Email: {email}
     - Password: {password}
-    
-    Please log in to the School Management System using these credentials. For security reasons, we recommend changing your password after your first login.
-    
-    If you have any questions, please contact your school administrator.
-    
-    Thank you for joining our platform!
+
+    You can log in here: {login_url}
+
+    We recommend changing your password after your first login.
+
+    Best regards,
+    School Management
+    Qodebyte Team
     """
+
     
     try:
-        print(f"Sending teacher credentials email to {email}...")
-        result = send_mail(
-            subject=subject,
-            message=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            html_message=html_content,
-            fail_silently=False,
-        )
-        print(f"Email sent successfully! Result: {result}")
-        return True
+        return send_email_with_brevo(email, subject, html_content, text_content)
     except Exception as e:
-        print(f"Failed to send email: {str(e)}")
-        
-        # For development, print the credentials to console
-        if settings.DEBUG:
-            print("\n==== DEVELOPMENT MODE: EMAIL WOULD BE SENT ====")
-            print(f"To: {email}")
-            print(f"Subject: {subject}")
-            print(f"Credentials:")
-            print(f"  Email: {email}")
-            print(f"  Password: {password}")
-            print("==============================================\n")
-            return True  # Return True in development so teacher creation can continue
-        
-        # In production, re-raise the exception
+        print(f"Failed to send teacher credentials email: {str(e)}")
         raise e

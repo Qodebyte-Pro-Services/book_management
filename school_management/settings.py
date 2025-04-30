@@ -4,6 +4,9 @@ from pathlib import Path
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
+import dj_database_url
+from decouple import config
+
 
 load_dotenv()
 
@@ -11,11 +14,8 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-o2-+tkxz^im^c=jlwx9bme_c6eg9_@hky&(p9%t+xj$u-yx!@0'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -30,13 +30,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Third-party apps
     'rest_framework',
     'corsheaders',
     'django_filters',
-    
-    # Local apps
     'core',
     'users',
     'schools',
@@ -44,8 +40,6 @@ INSTALLED_APPS = [
     'students',
     #'finance',
 ]
-
-
 
 
 
@@ -84,25 +78,21 @@ WSGI_APPLICATION = 'school_management.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+DATABASES = {
+    'default': dj_database_url.parse(config('DATABASE_URL'), conn_max_age=600),
+}
 
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
+#         'ENGINE': 'django_tenants.postgresql_backend', 
+#         'NAME': 'db',
+#         'USER': 'haze',
+#         'PASSWORD': '12345',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
 #     }
 # }
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django_tenants.postgresql_backend',  # Requires PostgreSQL
-        'NAME': 'db',
-        'USER': 'haze',
-        'PASSWORD': '12345',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
 
 
 # Password validation
@@ -156,10 +146,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
 
-# DATABASE_ROUTERS = (
-#     'django_tenants.routers.TenantSyncRouter',
-# )
-
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -183,7 +169,6 @@ SIMPLE_JWT = {
 }
 
 # Email settings
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
@@ -192,20 +177,24 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'harrisonaka29@gmail.com')
 
-# Brevo API settings
-# BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
+#Brevo API settings
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
 
-# Debug print to verify settings
-# print(f"Email settings:")
-# print(f"  BACKEND: {EMAIL_BACKEND}")
-# print(f"  HOST: {EMAIL_HOST}")
-# print(f"  PORT: {EMAIL_PORT}")
-# print(f"  USER: {EMAIL_HOST_USER}")
-# print(f"  FROM: {DEFAULT_FROM_EMAIL}")
+#Debug print to verify settings
+print(f"Email settings:")
+print(f"  BACKEND: {EMAIL_BACKEND}")
+print(f"  HOST: {EMAIL_HOST}")
+print(f"  PORT: {EMAIL_PORT}")
+print(f"  USER: {EMAIL_HOST_USER}")
+print(f"  FROM: {DEFAULT_FROM_EMAIL}")
 
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    print("Using console email backend for development")
+
+# using django console
+# if DEBUG:
+#     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+#     print("Using console email backend for development")
+
+
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
 
