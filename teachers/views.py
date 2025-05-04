@@ -18,10 +18,10 @@ from core.permissions import IsTeacherOrAdmin, IsTeacherWithFullAccess
 from core.utils import send_teacher_credentials_email
 import secrets
 import string
-from django.core.exceptions import ValidationError
 from rest_framework.exceptions import ValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import NotFound
 
-from django.db import IntegrityError 
 
 # In teachers/views.py
 class TeacherListCreateView(generics.ListCreateAPIView):
@@ -74,21 +74,35 @@ class TeacherListCreateView(generics.ListCreateAPIView):
         
         # Pass the school to the serializer context
         serializer.context['school'] = school
+        teacher = serializer.save()  # Save the teacher object
         
-        try:
-            serializer.save()
-        except IntegrityError as e:
-            if "unique constraint" in str(e).lower() and "employee_id" in str(e).lower():
-                raise ValidationError({"employee_id": "A teacher with this employee ID already exists in this school."})
-            else:
-                # Re-raise the exception if it's not a unique constraint violation
-                raise
+        # Use the TeacherSerializer to format the response
+        response_serializer = TeacherSerializer(teacher, context=self.get_serializer_context())
+        
+        # Get the serialized data
+        teacher_data = response_serializer.data
+        
+        # Create the response data
+        response_data = {
+            'custom_id': teacher_data['custom_id'],  # Add teacher custom_id
+            **teacher_data,
+        }
+        
+        # Remove redundant custom_id and user
+        response_data.pop('custom_id')
+        del response_data['user']
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
 
 class TeacherDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieve, update or delete a teacher instance
     """
     parser_classes = [MultiPartParser, FormParser]
+    serializer_class = TeacherSerializer
+    permission_classes = [IsAuthenticated, IsSchoolAdmin]
+    lookup_field = 'custom_id'  # Use custom_id for lookups
     
     def get_queryset(self):
         # Try to get school from request
@@ -106,15 +120,32 @@ class TeacherDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Filter teachers by the current school
         return Teacher.objects.filter(school=school)
     
-    def get_serializer_class(self):
-        if self.request.method in ['PUT', 'PATCH']:
-            return TeacherUpdateSerializer
-        return TeacherSerializer
+    def get_object(self):
+        queryset = self.get_queryset()
+        custom_id = self.kwargs['pk']
+       # print(f"Attempting to retrieve teacher with custom_id: {custom_id}")
+        try:
+            obj = queryset.get(custom_id=custom_id)
+            print(f"Found teacher: {obj}")
+        except Teacher.DoesNotExist:
+           # print("Teacher not found")
+            raise NotFound("Teacher not found")
+        return obj
     
-    def get_permissions(self):
-        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            return [IsAuthenticated(), IsSchoolAdmin()]
-        return [IsAuthenticated(), IsTeacherOrAdmin()]
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user = instance.user  # Get the associated user
+        
+        # Delete the teacher instance
+        self.perform_destroy(instance)
+        
+        # Delete the associated user
+        user.delete()
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    def perform_destroy(self, instance):
+        instance.delete()
 
 class TeacherProfileView(generics.RetrieveUpdateAPIView):
     """
@@ -138,12 +169,14 @@ class TeacherProfileView(generics.RetrieveUpdateAPIView):
             return TeacherSerializer
         return TeacherProfileUpdateSerializer
 
+
 class TeacherClassListView(generics.ListAPIView):
     """
     List classes assigned to a teacher
     """
     serializer_class = TeacherClassAssignmentSerializer
     permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
+    lookup_field = 'custom_id'
     
     def get_queryset(self):
         teacher_id = self.kwargs.get('teacher_id')
@@ -161,9 +194,11 @@ class TeacherClassListView(generics.ListAPIView):
                 return TeacherClassAssignment.objects.none()
         
         return TeacherClassAssignment.objects.filter(
-            teacher_id=teacher_id,
+            teacher__custom_id=teacher_id,
             teacher__school=school
         )
+
+
 
 class TeacherAttendanceListCreateView(generics.ListCreateAPIView):
     """
@@ -243,7 +278,7 @@ def resend_teacher_credentials(request, pk):
             )
     
     try:
-        teacher = Teacher.objects.get(pk=pk, school=school)
+        teacher = Teacher.objects.get(custom_id=pk, school=school)
     except Teacher.DoesNotExist:
         return Response(
             {"detail": "Teacher not found."},
@@ -274,7 +309,7 @@ def resend_teacher_credentials(request, pk):
             email=user.email,
             password=new_password,
             full_name=teacher.full_name,
-            school_name=teacher.school.school_name  # Changed from name to school_name
+            school_name=teacher.school.school_name
         )
         return Response({
             "message": f"New credentials sent to {user.email}",

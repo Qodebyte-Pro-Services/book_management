@@ -3,6 +3,12 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
+from core.utils import generate_custom_id
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+from core.utils import generate_custom_id
+
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, full_name, password=None, **extra_fields):
@@ -36,6 +42,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_verified = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     
+    
     # User role choices
     ROLE_ADMIN = 'admin'
     ROLE_TEACHER = 'teacher'
@@ -50,7 +57,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     ]
     
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=ROLE_ADMIN)
-    
+    custom_id = models.CharField(max_length=20, unique=True, blank=True, null=True) 
     
     objects = UserManager()
     
@@ -60,8 +67,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
     
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
+    def save(self, *args, **kwargs):
+        if not self.pk:  
+            self.custom_id = generate_custom_id("US")  # Generate custom ID
+        super().save(*args, **kwargs)
+    
 
 @receiver(pre_save, sender=User)
 def ensure_staff_status(sender, instance, **kwargs):

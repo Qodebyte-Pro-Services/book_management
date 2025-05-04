@@ -1,6 +1,9 @@
 from django.db import models
 from django.conf import settings
 from schools.models import School
+from core.utils import generate_custom_id
+
+
 
 class Class(models.Model):
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='classes')
@@ -8,6 +11,7 @@ class Class(models.Model):
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    custom_id = models.CharField(max_length=20, unique=True, blank=True, null=True) 
     
     class Meta:
         verbose_name_plural = 'Classes'
@@ -15,6 +19,13 @@ class Class(models.Model):
     
     def __str__(self):
         return f"{self.class_name} - {self.school.school_name}"
+    
+        
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.custom_id = generate_custom_id("CL")  # Generate custom ID
+        super().save(*args, **kwargs)
+        
 
 class Student(models.Model):
     GENDER_CHOICES = [
@@ -39,9 +50,15 @@ class Student(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    custom_id = models.CharField(max_length=20, unique=True, blank=True, null=True) 
     
     def __str__(self):
         return f"{self.first_name} {self.last_name} - {self.registration_number}"
+    
+    def save(self, *args, **kwargs):
+        if not self.pk: 
+            self.custom_id = generate_custom_id("ST")  # Generate custom ID
+        super().save(*args, **kwargs)
 
 class StudentAttendance(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='attendances')
@@ -55,3 +72,4 @@ class StudentAttendance(models.Model):
     def __str__(self):
         status = "Present" if self.is_present else "Absent"
         return f"{self.student.first_name} {self.student.last_name} - {self.date} - {status}"
+    

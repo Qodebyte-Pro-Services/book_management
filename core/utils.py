@@ -5,6 +5,22 @@ from django.core.mail import send_mail
 from django.conf import settings
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
+import uuid
+import re
+
+def generate_custom_id(prefix, length=7):
+    """Generates a custom ID in the format PREFIX + UUID"""
+    # Generate a UUID
+    unique_id = str(uuid.uuid4()).upper()
+    # Extract alphanumeric characters
+    alphanumeric_id = re.sub(r'[^A-Z0-9]', '', unique_id)
+    # Truncate or pad to the desired length
+    if len(alphanumeric_id) > length:
+        alphanumeric_id = alphanumeric_id[:length]
+    else:
+        alphanumeric_id = alphanumeric_id.ljust(length, '0')
+    return f"{prefix}{alphanumeric_id[:5]}-{alphanumeric_id[5:]}"
+
 
 def generate_otp(length=6):
     """Generate a random OTP of specified length."""
@@ -40,8 +56,10 @@ def send_email_with_brevo(to_email, subject, html_content, text_content=None):
         api_response = api_instance.send_transac_email(send_smtp_email)
         return True
     except ApiException as e:
-        print(f"Exception when calling TransactionalEmailsApi->send_transac_email: {e}")
+       # print(f"Exception when calling TransactionalEmailsApi->send_transac_email: {e}")
         raise e
+
+
 
 def send_verification_email(email, otp):
     """Send verification email with OTP using Brevo."""
@@ -85,7 +103,7 @@ def send_verification_email(email, otp):
     try:
         return send_email_with_brevo(email, subject, html_content, text_content)
     except Exception as e:
-        print(f"Failed to send verification email: {str(e)}")
+       #print(f"Failed to send verification email: {str(e)}")
         raise e
 
 def send_password_reset_email(email, otp):
@@ -130,7 +148,7 @@ def send_password_reset_email(email, otp):
     try:
         return send_email_with_brevo(email, subject, html_content, text_content)
     except Exception as e:
-        print(f"Failed to send password reset email: {str(e)}")
+       # print(f"Failed to send password reset email: {str(e)}")
         raise e
 
 def send_school_creation_email(email, school_name, school_type, full_name):
@@ -189,7 +207,7 @@ def send_school_creation_email(email, school_name, school_type, full_name):
     try:
         return send_email_with_brevo(email, subject, html_content, text_content)
     except Exception as e:
-        print(f"Failed to send school creation email: {str(e)}")
+        #print(f"Failed to send school creation email: {str(e)}")
         raise e
 
 def send_teacher_credentials_email(email, password, full_name, school_name):
@@ -250,5 +268,5 @@ def send_teacher_credentials_email(email, password, full_name, school_name):
     try:
         return send_email_with_brevo(email, subject, html_content, text_content)
     except Exception as e:
-        print(f"Failed to send teacher credentials email: {str(e)}")
+        #print(f"Failed to send teacher credentials email: {str(e)}")
         raise e

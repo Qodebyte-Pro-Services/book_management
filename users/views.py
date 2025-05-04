@@ -17,6 +17,12 @@ from .models import User, EmailVerification, PasswordReset
 from core.utils import generate_otp, send_verification_email, send_password_reset_email
 from django.utils import timezone
 from datetime import timedelta
+from django.contrib.auth import login
+
+from rest_framework.exceptions import ValidationError
+from django.db import IntegrityError
+
+
 
 class RegisterUserView(generics.GenericAPIView):
     serializer_class = UserRegistrationSerializer
@@ -53,6 +59,8 @@ class RegisterUserView(generics.GenericAPIView):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+    
 class VerifyEmailView(generics.GenericAPIView):
     serializer_class = VerifyEmailSerializer
     permission_classes = [AllowAny]
@@ -71,11 +79,26 @@ class VerifyEmailView(generics.GenericAPIView):
             verification.is_used = True
             verification.save()
             
+            # Log in the user
+            login(request, user)
+            
+          # Generate tokens
+            refresh = RefreshToken.for_user(user)
+            
             return Response({
-                "message": "Email verified successfully. You can now create your school.",
-                "user_id": user.id
+                "message": "Email verified successfully. You are now logged in.",
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                "user": {
+                    "custom_id": user.custom_id,
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "role": user.role, 
+                    "has_school": hasattr(user, 'school')
+                }
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ResendVerificationView(generics.GenericAPIView):
     serializer_class = ResendVerificationSerializer
@@ -132,7 +155,7 @@ class LoginView(generics.GenericAPIView):
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
                 'user': {
-                    'id': user.id,
+                    'id': user.custom_id,
                     'email': user.email,
                     'full_name': user.full_name,
                     'role': user.role,
@@ -142,15 +165,29 @@ class LoginView(generics.GenericAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class LogoutView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data["refresh"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            return Response(status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
 class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
     
     def get_object(self):
         return self.request.user
+    
 
-
-# In users/views.py
 class ForgotPasswordView(generics.GenericAPIView):
     serializer_class = ForgotPasswordSerializer
     permission_classes = [AllowAny]

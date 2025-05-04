@@ -33,7 +33,7 @@ class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
         fields = (
-            'id', 'user', 'employee_id', 'first_name', 'last_name', 'date_of_birth', 'gender',
+            'custom_id', 'user', 'school', 'employee_id', 'first_name', 'last_name', 'date_of_birth', 'gender',
             'profile_image', 'profile_image_url', 'phone_number', 'address', 'state', 'city',
             'emergency_contact_name', 'emergency_contact_relationship', 'emergency_contact_phone',
             'highest_certificate', 'school_name', 'graduation_year',
@@ -41,14 +41,15 @@ class TeacherSerializer(serializers.ModelSerializer):
             'joining_date', 'salary', 'is_active', 'access_level', 'assigned_classes',
             'created_at', 'updated_at'
         )
-        read_only_fields = ('id', 'user', 'school', 'created_at', 'updated_at')
+        read_only_fields = ('custom_id', 'created_at', 'updated_at')
+    
     
     def get_profile_image_url(self, obj):
         if obj.profile_image:
             return obj.profile_image.url
         return None
 
-
+# In teachers/serializers.py
 class TeacherCreateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(write_only=True)
     password = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'})
@@ -60,11 +61,12 @@ class TeacherCreateSerializer(serializers.ModelSerializer):
     )
     profile_image = serializers.ImageField(required=False)
     send_credentials = serializers.BooleanField(default=True, write_only=True)
+    # user = UserSerializer(read_only=True)  # Remove this line
     
     class Meta:
         model = Teacher
         fields = (
-            'email', 'password', 'employee_id', 'first_name', 'last_name', 'date_of_birth', 'gender',
+            'custom_id', 'email', 'password', 'employee_id', 'first_name', 'last_name', 'date_of_birth', 'gender',
             'profile_image', 'phone_number', 'address', 'state', 'city',
             'emergency_contact_name', 'emergency_contact_relationship', 'emergency_contact_phone',
             'highest_certificate', 'school_name', 'graduation_year',
@@ -72,6 +74,7 @@ class TeacherCreateSerializer(serializers.ModelSerializer):
             'joining_date', 'salary', 'is_active', 'access_level', 'assigned_classes',
             'send_credentials'
         )
+        read_only_fields = ('custom_id',)  # Remove user from read_only_fields
     
     def validate_email(self, value):
         # Check if email already exists

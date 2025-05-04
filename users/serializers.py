@@ -13,10 +13,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ('id', 'email', 'full_name', 'password', 'confirm_password', 'role')
+        fields = ('id', 'email', 'full_name', 'password', 'confirm_password', 'role', 'is_verified')
+        
         extra_kwargs = {
             'password': {'write_only': True},
         }
+        
+        
     
     def validate(self, data):
         # Check if passwords match
@@ -96,8 +99,8 @@ class UserLoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'full_name', 'role', 'is_verified')
-        read_only_fields = ('id', 'email', 'is_verified')
+        fields = ('custom_id', 'email', 'full_name', 'role', 'is_verified') 
+        read_only_fields = ('custom_id', 'email', 'is_verified')
 
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()

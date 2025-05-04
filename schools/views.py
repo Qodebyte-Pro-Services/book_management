@@ -8,9 +8,17 @@ from core.utils import send_school_creation_email
 from rest_framework.exceptions import NotFound
 from core.permissions import IsAdminOnly
 
+
 class CreateSchoolView(generics.CreateAPIView):
     serializer_class = SchoolSerializer
     permission_classes = [IsAuthenticated, IsAdminOnly]
+    
+    def perform_create(self, serializer):
+        # Get the admin user from the request
+        admin_user = self.request.user
+        
+        # Create the school with the admin user
+        serializer.save(admin=admin_user)
     
     def post(self, request, *args, **kwargs):
         # Check if user is verified
@@ -27,15 +35,16 @@ class CreateSchoolView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer = self.serializer_class(data=request.data)  # Remove context={'request': request}
         if serializer.is_valid():
-            school = serializer.save()
+            self.perform_create(serializer)  # Call perform_create to save the school
+            school = serializer.instance  # Access the created school object
             
             # Send email notification
             try:
                 send_school_creation_email(
                     email=request.user.email,
-                    school_name=school.name,
+                    school_name=school.school_name,
                     school_type=school.school_type,
                     full_name=request.user.full_name
                 )
@@ -49,7 +58,6 @@ class CreateSchoolView(generics.CreateAPIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class SchoolDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = SchoolSerializer
     permission_classes = [IsAuthenticated, IsSchoolAdmin]
@@ -59,3 +67,6 @@ class SchoolDetailView(generics.RetrieveUpdateAPIView):
             return self.request.user.school
         else:
             raise NotFound("You don't have a school associated with your account.")
+        
+        
+        

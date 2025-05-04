@@ -2,6 +2,8 @@ from django.db import models
 from django.conf import settings
 from schools.models import School
 from students.models import Class
+from core.utils import generate_custom_id
+
 
 class Teacher(models.Model):
     # Relationship fields
@@ -43,10 +45,11 @@ class Teacher(models.Model):
     job_reference_contact = models.CharField(max_length=100, blank=True, null=True)
     
     # School-specific Information
-    employee_id = models.CharField(max_length=50, unique=False)
+    employee_id = models.CharField(max_length=50)
     joining_date = models.DateField()
     salary = models.DecimalField(max_digits=10, decimal_places=2)
     is_active = models.BooleanField(default=True)
+    custom_id = models.CharField(max_length=20, unique=True, blank=True, null=True) 
     
     # Access Control
     ACCESS_LEVEL_CHOICES = [
@@ -65,6 +68,11 @@ class Teacher(models.Model):
     
     def __str__(self):
         return f"{self.first_name} {self.last_name} - {self.employee_id}"
+    
+    def save(self, *args, **kwargs):
+        if not self.pk: 
+            self.custom_id = generate_custom_id("TE") 
+        super().save(*args, **kwargs)
     
     @property
     def full_name(self):

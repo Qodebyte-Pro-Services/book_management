@@ -3,17 +3,25 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Class, Student, StudentAttendance
-from .serializers import ClassSerializer, StudentSerializer, StudentAttendanceSerializer
+from .serializers import ( ClassSerializer, StudentSerializer, StudentAttendanceSerializer, 
+StudentCreateSerializer, ClassCreateSerializer )
 from schools.permissions import IsSchoolAdmin
-from core.permissions import IsTeacherOrAdmin, IsTeacherWithFullAccess, IsTeacherWithLimitedAccess, IsTeacherWithClassOnlyAccess
-
+from core.permissions import ( IsTeacherOrAdmin, IsTeacherWithFullAccess, 
+IsTeacherWithLimitedAccess, IsTeacherWithClassOnlyAccess )
+from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound
+from django.db import IntegrityError  
 
 class ClassListCreateView(generics.ListCreateAPIView):
-    serializer_class = ClassSerializer
-    permission_classes = [IsAuthenticated, IsSchoolAdmin]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
+    permission_classes = [IsAuthenticated, IsSchoolAdmin]
+    
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ClassCreateSerializer
+        return ClassSerializer
     
     def get_queryset(self):
         # Try to get school from request
@@ -32,12 +40,31 @@ class ClassListCreateView(generics.ListCreateAPIView):
         return Class.objects.filter(school=school)
     
     def perform_create(self, serializer):
-        serializer.save()
+        try:
+            # Try to get school from request
+            if hasattr(self.request, 'school') and self.request.school:
+                school = self.request.school
+            else:
+                # Fallback: try to get school from user
+                from schools.models import School
+                school = School.objects.filter(admin=self.request.user).first()
+                
+                if not school:
+                    raise ValidationError("No school found for this user. Please create a school first.")
+            
+            serializer.save(school=school)
+        except IntegrityError as e:
+            if "unique constraint" in str(e).lower() and "class_name" in str(e).lower():
+                raise serializers.ValidationError({"class_name": "A class with this name already exists in this school."})
+            else:
+                # Re-raise the exception if it's not a unique constraint violation
+                raise
 
 
 class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ClassSerializer
     permission_classes = [IsAuthenticated, IsSchoolAdmin]
+    lookup_field = 'custom_id'  # Use custom_id for lookups
     
     def get_queryset(self):
         # Try to get school from request
@@ -54,6 +81,15 @@ class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
         
         # Filter classes by the current school
         return Class.objects.filter(school=school)
+    
+    def get_object(self):
+        queryset = self.get_queryset()
+        try:
+            obj = queryset.get(custom_id=self.kwargs['pk'])  # Use custom_id for lookup
+        except Class.DoesNotExist:
+            raise NotFound("Class not found")
+        return obj
+
 
 class StudentListCreateView(generics.ListCreateAPIView):
     serializer_class = StudentSerializer
@@ -61,6 +97,11 @@ class StudentListCreateView(generics.ListCreateAPIView):
     filterset_fields = ['is_active', 'gender', 'class_assigned']
     search_fields = ['first_name', 'last_name', 'registration_number', 'parent_name']
     ordering_fields = ['first_name', 'last_name', 'admission_date']
+    
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return StudentCreateSerializer
+        return StudentSerializer
     
     def get_permissions(self):
         if self.request.method == 'POST':

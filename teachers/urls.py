@@ -13,10 +13,10 @@ from .views import (
 urlpatterns = [
     # Teacher endpoints
     path('', TeacherListCreateView.as_view(), name='teacher-list'),
-    path('<int:pk>/', TeacherDetailView.as_view(), name='teacher-detail'),
+    path('<str:pk>/', TeacherDetailView.as_view(), name='teacher-detail'),
     path('profile/', TeacherProfileView.as_view(), name='teacher-profile'),
-    path('<int:teacher_id>/classes/', TeacherClassListView.as_view(), name='teacher-classes'),
-    path('<int:pk>/resend-credentials/', resend_teacher_credentials, name='teacher-resend-credentials'),
+    path('<str:teacher_id>/classes/', TeacherClassListView.as_view(), name='teacher-classes'),
+    path('<str:pk>/resend-credentials/', resend_teacher_credentials, name='teacher-resend-credentials'),
     
     # Teacher attendance endpoints
     path('attendance/', TeacherAttendanceListCreateView.as_view(), name='teacher-attendance-list'),

@@ -180,14 +180,6 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'harrisonaka29@gmail.c
 #Brevo API settings
 BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
 
-#Debug print to verify settings
-print(f"Email settings:")
-print(f"  BACKEND: {EMAIL_BACKEND}")
-print(f"  HOST: {EMAIL_HOST}")
-print(f"  PORT: {EMAIL_PORT}")
-print(f"  USER: {EMAIL_HOST_USER}")
-print(f"  FROM: {DEFAULT_FROM_EMAIL}")
-
 
 # using django console
 # if DEBUG:
