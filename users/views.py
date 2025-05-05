@@ -18,9 +18,12 @@ from core.utils import generate_otp, send_verification_email, send_password_rese
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import login
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication 
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
+from rest_framework.views import APIView
+from django.contrib.auth import logout
 
-from rest_framework.exceptions import ValidationError
-from django.db import IntegrityError
 
 
 
@@ -166,19 +169,42 @@ class LoginView(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class LogoutView(generics.GenericAPIView):
+class LogoutAPIView(APIView):
     permission_classes = [IsAuthenticated]
-
+    
     def post(self, request):
-        try:
-            refresh_token = request.data["refresh"]
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-
-            return Response(status=status.HTTP_205_RESET_CONTENT)
-        except Exception as e:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
+        # For Token Authentication
+        if hasattr(request.user, 'auth_token'):
+            request.user.auth_token.delete()
+        
+        # For JWT Authentication with refresh token
+        if 'refresh' in request.data:
+            try:
+                from rest_framework_simplejwt.tokens import RefreshToken
+                refresh_token = request.data["refresh"]
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception as e:
+                return Response(
+                    {"error": f"Could not log out: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # For Session Authentication
+        logout(request)
+        
+        # Force the client to delete the token by returning specific instructions
+        response = Response(
+            {"detail": "Successfully logged out. Please remove all tokens from client storage."},
+            status=status.HTTP_200_OK
+        )
+        
+        # Clear any cookies that might be used for authentication
+        response.delete_cookie('auth_token')
+        response.delete_cookie('jwt_access')
+        response.delete_cookie('jwt_refresh')
+        
+        return response
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
@@ -248,3 +274,5 @@ class ResetPasswordView(generics.GenericAPIView):
                 "email": user.email
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    

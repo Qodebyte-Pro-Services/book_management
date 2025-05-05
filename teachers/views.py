@@ -147,6 +147,28 @@ class TeacherDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance):
         instance.delete()
 
+# class TeacherProfileView(generics.RetrieveUpdateAPIView):
+#     """
+#     Get or update the current teacher's profile
+#     """
+#     serializer_class = TeacherProfileUpdateSerializer
+#     permission_classes = [IsAuthenticated]
+#     parser_classes = [MultiPartParser, FormParser]
+    
+#     def get_object(self):
+#         try:
+#             return self.request.user.teacher_profile
+#         except Teacher.DoesNotExist:
+#             return Response(
+#                 {"detail": "Teacher profile not found."},
+#                 status=status.HTTP_404_NOT_FOUND
+#             )
+    
+#     def get_serializer_class(self):
+#         if self.request.method == 'GET':
+#             return TeacherSerializer
+#         return TeacherProfileUpdateSerializer
+
 class TeacherProfileView(generics.RetrieveUpdateAPIView):
     """
     Get or update the current teacher's profile
@@ -157,18 +179,22 @@ class TeacherProfileView(generics.RetrieveUpdateAPIView):
     
     def get_object(self):
         try:
-            return self.request.user.teacher_profile
+            # Try to get the teacher profile directly
+            teacher = Teacher.objects.get(user=self.request.user)
+            return teacher
         except Teacher.DoesNotExist:
-            return Response(
-                {"detail": "Teacher profile not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            # Raise NotFound exception instead of returning a Response
+            raise NotFound("Teacher profile not found.")
     
     def get_serializer_class(self):
         if self.request.method == 'GET':
             return TeacherSerializer
         return TeacherProfileUpdateSerializer
-
+    
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return TeacherSerializer
+        return TeacherProfileUpdateSerializer
 
 class TeacherClassListView(generics.ListAPIView):
     """

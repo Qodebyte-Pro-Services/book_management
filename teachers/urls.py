@@ -12,9 +12,9 @@ from .views import (
 
 urlpatterns = [
     # Teacher endpoints
+    path('profile/', TeacherProfileView.as_view(), name='teacher-profile'),
     path('', TeacherListCreateView.as_view(), name='teacher-list'),
     path('<str:pk>/', TeacherDetailView.as_view(), name='teacher-detail'),
-    path('profile/', TeacherProfileView.as_view(), name='teacher-profile'),
     path('<str:teacher_id>/classes/', TeacherClassListView.as_view(), name='teacher-classes'),
     path('<str:pk>/resend-credentials/', resend_teacher_credentials, name='teacher-resend-credentials'),
     

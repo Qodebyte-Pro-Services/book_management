@@ -1,9 +1,8 @@
 from django.utils.deprecation import MiddlewareMixin
 from django.http import HttpResponseForbidden
-from django.urls import resolve
-from django.conf import settings
 
-    
+
+
 class TenantMiddleware(MiddlewareMixin):
     """
     Middleware to handle multi-tenancy using the filtering approach.
@@ -63,3 +62,4 @@ class TenantMiddleware(MiddlewareMixin):
             request.school = None
         
         return None
+

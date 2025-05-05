@@ -9,7 +9,8 @@ from django.dispatch import receiver
 from core.utils import generate_custom_id
 
 
-
+    
+    
 class UserManager(BaseUserManager):
     def create_user(self, email, full_name, password=None, **extra_fields):
         if not email:
